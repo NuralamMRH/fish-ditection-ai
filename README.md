@@ -92,3 +92,4 @@ Json file with the names of fish classes that the latest model recognizes can be
 
 [MIT](https://choosealicense.com/licenses/mit/)
 
+# fish-ditection-ai
