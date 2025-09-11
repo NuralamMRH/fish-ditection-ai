@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>🐟 Real-time Fish Detection API with Callback Demo</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+      }
+
+      .header p {
+        font-size: 1.2em;
+        opacity: 0.9;
+      }
+
+      .content {
+        padding: 30px;
+      }
+
+      .section {
+        margin-bottom: 40px;
+      }
+
+      .section h3 {
+        color: #333;
+        margin-bottom: 20px;
+        font-size: 1.5em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .callback-section {
+        background: #f8f9fa;
+        padding: 25px;
+        border-radius: 15px;
+        border: 2px solid #e9ecef;
+        margin-bottom: 30px;
+      }
+
+      .input-group {
+        margin-bottom: 20px;
+      }
+
+      .input-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #495057;
+      }
+
+      .input-group input {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        font-size: 16px;
+        transition: border-color 0.3s ease;
+      }
+
+      .input-group input:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .upload-area {
+        border: 3px dashed #ddd;
+        padding: 60px;
+        text-align: center;
+        border-radius: 15px;
+        background: #f8f9fa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+      }
+
+      .upload-area:hover,
+      .upload-area.dragover {
+        border-color: #667eea;
+        background: #f0f4ff;
+        transform: translateY(-2px);
+      }
+
+      .upload-area h4 {
+        color: #666;
+        margin-bottom: 15px;
+      }
+
+      .upload-area p {
+        color: #888;
+        margin-bottom: 20px;
+      }
+
+      .btn {
+        display: inline-block;
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+      }
+
+      .btn-success {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      }
+
+      .btn-success:hover {
+        box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3);
+      }
+
+      .btn-warning {
+        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        color: #212529;
+      }
+
+      .btn-warning:hover {
+        box-shadow: 0 10px 20px rgba(255, 193, 7, 0.3);
+      }
+
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      .status {
+        padding: 15px 20px;
+        margin: 20px 0;
+        border-radius: 10px;
+        font-weight: 500;
+      }
+
+      .status.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      .status.info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+
+      .results {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 25px;
+        margin-top: 25px;
+      }
+
+      .session-info {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        border-left: 4px solid #667eea;
+      }
+
+      .fish-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+      }
+
+      .fish-card {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #28a745;
+      }
+
+      .fish-card h5 {
+        color: #333;
+        margin-bottom: 15px;
+        font-size: 1.2em;
+      }
+
+      .fish-detail {
+        display: flex;
+        justify-content: space-between;
+        margin: 8px 0;
+        padding: 5px 0;
+        border-bottom: 1px solid #f0f0f0;
+      }
+
+      .fish-detail:last-child {
+        border-bottom: none;
+      }
+
+      .fish-detail strong {
+        color: #495057;
+      }
+
+      .fish-detail span {
+        color: #666;
+      }
+
+      .submit-section {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 25px;
+        border-radius: 15px;
+        text-align: center;
+        margin-top: 20px;
+      }
+
+      .submit-section h4 {
+        margin-bottom: 15px;
+        font-size: 1.3em;
+      }
+
+      .submit-section p {
+        margin-bottom: 20px;
+        opacity: 0.9;
+      }
+
+      .loading {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 10px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .api-info {
+        background: #e7f3ff;
+        border: 1px solid #b8daff;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+
+      .api-info h4 {
+        color: #004085;
+        margin-bottom: 10px;
+      }
+
+      .api-endpoints {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+      }
+
+      .endpoint {
+        background: white;
+        padding: 12px;
+        border-radius: 8px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        border-left: 3px solid #667eea;
+      }
+
+      @media (max-width: 768px) {
+        .fish-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .api-endpoints {
+          grid-template-columns: 1fr;
+        }
+
+        .upload-area {
+          padding: 40px 20px;
+        }
+
+        .content {
+          padding: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🐟 Real-time Fish Detection API</h1>
+        <p>Advanced Multi-Model Detection with Callback System</p>
+      </div>
+
+      <div class="content">
+        <!-- API Information -->
+        <div class="api-info">
+          <h4>📡 API Features</h4>
+          <p>
+            This API provides real-time fish detection using multiple YOLO
+            models (YOLO12 + YOLO10) with 3D measurement, weight calculation,
+            and callback URL integration.
+          </p>
+
+          <div
+            style="
+              background: #fff3cd;
+              border: 1px solid #ffeaa7;
+              border-radius: 8px;
+              padding: 15px;
+              margin: 15px 0;
+            "
+          >
+            <h5 style="color: #856404; margin: 0 0 10px 0">
+              🔗 Using Callback URLs via Query Parameters
+            </h5>
+            <p style="margin: 5px 0; color: #856404">
+              <strong>Example:</strong>
+              <code
+                >http://localhost:5009/demo?callback_url=https://www.itrucksea.com/fishing-log/batch</code
+              >
+            </p>
+            <p style="margin: 5px 0; color: #856404">
+              The API automatically detects callback URLs from query parameters,
+              headers, or form data.
+            </p>
+          </div>
+
+          <div class="api-endpoints">
+            <div class="endpoint">POST /api/detect?callback_url=...</div>
+            <div class="endpoint">GET /api/status</div>
+            <div class="endpoint">POST /api/callback</div>
+            <div class="endpoint">POST /api/submit/{id}</div>
+            <div class="endpoint">GET /api/health</div>
+          </div>
+        </div>
+
+        <!-- Callback Configuration -->
+        <div class="section">
+          <h3>🔗 Callback Configuration</h3>
+          <div class="callback-section">
+            <div class="input-group">
+              <label for="callbackUrl"
+                >Callback URL (Where to send fish data):</label
+              >
+              <input
+                type="url"
+                id="callbackUrl"
+                placeholder="https://www.itrucksea.com/fishing-log/batch"
+                value=""
+              />
+              <small
+                style="
+                  color: #666;
+                  font-size: 14px;
+                  margin-top: 5px;
+                  display: block;
+                "
+              >
+                💡 Set via query parameter:
+                <code>?callback_url=https://your-url.com</code> or enter
+                manually above.
+              </small>
+            </div>
+
+            <div class="input-group">
+              <label for="userInfo">Additional User Info (Optional):</label>
+              <input
+                type="text"
+                id="userInfo"
+                placeholder="e.g., Fisher Name, Location, etc."
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Section -->
+        <div class="section">
+          <h3>📷 Fish Image Upload</h3>
+          <div
+            class="upload-area"
+            id="uploadArea"
+            onclick="document.getElementById('fileInput').click()"
+          >
+            <h4>🎣 Drop your fish image here</h4>
+            <p>or click to select from your device</p>
+            <button class="btn" type="button">Select Fish Image</button>
+            <input
+              type="file"
+              id="fileInput"
+              accept="image/*"
+              style="display: none"
+            />
+          </div>
+        </div>
+
+        <!-- Status Section -->
+        <div id="statusSection"></div>
+
+        <!-- Results Section -->
+        <div id="resultsSection"></div>
+      </div>
+    </div>
+
+    <script>
+      let currentSessionId = null;
+      let currentResults = null;
+
+      // Check for callback URL in query parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const callbackFromQuery = urlParams.get("callback_url");
+      if (callbackFromQuery) {
+        document.getElementById("callbackUrl").value = callbackFromQuery;
+        showStatus(
+          `🔗 Callback URL loaded from query: ${callbackFromQuery}`,
+          "success"
+        );
+      }
+
+      const uploadArea = document.getElementById("uploadArea");
+      const fileInput = document.getElementById("fileInput");
+      const statusSection = document.getElementById("statusSection");
+      const resultsSection = document.getElementById("resultsSection");
+
+      // Drag and drop handlers
+      uploadArea.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        uploadArea.classList.add("dragover");
+      });
+
+      uploadArea.addEventListener("dragleave", () => {
+        uploadArea.classList.remove("dragover");
+      });
+
+      uploadArea.addEventListener("drop", (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove("dragover");
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          uploadImage(files[0]);
+        }
+      });
+
+      fileInput.addEventListener("change", (e) => {
+        if (e.target.files.length > 0) {
+          uploadImage(e.target.files[0]);
+        }
+      });
+
+      function showStatus(message, type = "info", showLoading = false) {
+        const loadingHtml = showLoading ? '<span class="loading"></span>' : "";
+        statusSection.innerHTML = `<div class="status ${type}">${loadingHtml}${message}</div>`;
+      }
+
+      function uploadImage(file) {
+        const formData = new FormData();
+        formData.append("image", file);
+
+        const callbackUrl = document.getElementById("callbackUrl").value;
+
+        // Build URL with callback as query parameter (preferred method)
+        let uploadUrl = "/api/detect";
+        if (callbackUrl) {
+          uploadUrl += `?callback_url=${encodeURIComponent(callbackUrl)}`;
+        }
+
+        showStatus(
+          "🔍 Analyzing fish image with multi-model detection...",
+          "info",
+          true
+        );
+        resultsSection.innerHTML = "";
+
+        fetch(uploadUrl, {
+          method: "POST",
+          body: formData,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            currentSessionId = data.session_id;
+            currentResults = data;
+
+            if (data.success) {
+              showStatus(
+                `✅ Analysis complete! Detected ${data.fish_count} fish using ${
+                  data.models_used
+                    ? data.models_used.join(" + ")
+                    : "advanced models"
+                }.`,
+                "success"
+              );
+              displayResults(data);
+            } else {
+              showStatus(
+                `❌ Analysis failed: ${data.error || "Unknown error"}`,
+                "error"
+              );
+            }
+          })
+          .catch((error) => {
+            showStatus(`🚨 Network error: ${error.message}`, "error");
+          });
+      }
+
+      function displayResults(data) {
+        let totalWeight = 0;
+        if (data.fish) {
+          totalWeight = data.fish.reduce(
+            (sum, fish) => sum + (fish.weight?.weight_kg || 0),
+            0
+          );
+        }
+
+        let html = `
+                <div class="results">
+                    <h3>🎣 Detection Results</h3>
+                    
+                    <div class="session-info">
+                        <h4>📊 Session Summary</h4>
+                        <div class="fish-detail">
+                            <strong>Session ID:</strong>
+                            <span>${data.session_id}</span>
+                        </div>
+                        <div class="fish-detail">
+                            <strong>Fish Detected:</strong>
+                            <span>${data.fish_count} fish</span>
+                        </div>
+                        <div class="fish-detail">
+                            <strong>Total Weight:</strong>
+                            <span>${totalWeight.toFixed(3)} kg (${(
+          totalWeight * 2.20462
+        ).toFixed(2)} lbs)</span>
+                        </div>
+                        <div class="fish-detail">
+                            <strong>Detection Models:</strong>
+                            <span>${
+                              data.models_used
+                                ? data.models_used.join(", ")
+                                : "Multi-model system"
+                            }</span>
+                        </div>
+                        <div class="fish-detail">
+                            <strong>Analysis Time:</strong>
+                            <span>${new Date(
+                              data.timestamp
+                            ).toLocaleString()}</span>
+                        </div>
+            `;
+
+        if (data.callback_url) {
+          html += `
+                        <div class="fish-detail">
+                            <strong>Callback URL:</strong>
+                            <span>${data.callback_url}</span>
+                        </div>
+                `;
+        }
+
+        html += "</div>";
+
+        if (data.fish && data.fish.length > 0) {
+          html += "<h4>🐟 Individual Fish Analysis</h4>";
+          html += '<div class="fish-grid">';
+
+          data.fish.forEach((fish, index) => {
+            const weight = fish.weight || {};
+            const dimensions = fish.dimensions || {};
+
+            html += `
+                        <div class="fish-card">
+                            <h5>🐠 Fish ${index + 1}: ${fish.species}</h5>
+                            
+                            <div class="fish-detail">
+                                <strong>Confidence:</strong>
+                                <span>${(fish.confidence * 100).toFixed(
+                                  1
+                                )}%</span>
+                            </div>
+                            
+                            <div class="fish-detail">
+                                <strong>Weight:</strong>
+                                <span>${
+                                  weight.weight_kg?.toFixed(3) || "N/A"
+                                } kg</span>
+                            </div>
+                            
+                            <div class="fish-detail">
+                                <strong>Weight (lbs):</strong>
+                                <span>${
+                                  weight.weight_pounds?.toFixed(2) || "N/A"
+                                } lbs</span>
+                            </div>
+                            
+                            <div class="fish-detail">
+                                <strong>Length:</strong>
+                                <span>${
+                                  dimensions.total_length_cm?.toFixed(1) ||
+                                  "N/A"
+                                } cm</span>
+                            </div>
+                            
+                            <div class="fish-detail">
+                                <strong>Length (inches):</strong>
+                                <span>${
+                                  dimensions.length_inches?.toFixed(1) || "N/A"
+                                } inches</span>
+                            </div>
+                            
+                            <div class="fish-detail">
+                                <strong>Distance:</strong>
+                                <span>${fish.distance_cm} cm</span>
+                            </div>
+                            
+                            <div class="fish-detail">
+                                <strong>Girth:</strong>
+                                <span>${
+                                  dimensions.estimated_girth_cm?.toFixed(1) ||
+                                  "N/A"
+                                } cm</span>
+                            </div>
+                            
+                            <div class="fish-detail">
+                                <strong>Detected by:</strong>
+                                <span>${fish.detected_by}</span>
+                            </div>
+                    `;
+
+            if (fish.species_classification) {
+              html += `
+                            <div class="fish-detail">
+                                <strong>Species Classification:</strong>
+                                <span>${
+                                  fish.species_classification.predicted_species
+                                } (${(
+                fish.species_classification.confidence * 100
+              ).toFixed(1)}%)</span>
+                            </div>
+                        `;
+            }
+
+            html += "</div>";
+          });
+
+          html += "</div>";
+        }
+
+        // Add submit section if callback URL is provided
+        if (data.callback_url) {
+          html += `
+                    <div class="submit-section">
+                        <h4>🚀 Submit Results to Your System</h4>
+                        <p>Ready to send your fish data to <strong>${data.callback_url}</strong>?</p>
+                        <p>Choose your submission method:</p>
+                        
+                        <button class="btn btn-success" onclick="submitToCallback()" id="submitBtn">
+                            📤 Submit & Redirect to Callback URL
+                        </button>
+                        <br>
+                        <button class="btn btn-warning" onclick="testCallback()" style="margin-top: 10px;">
+                            🧪 Test Callback (REST API Only)
+                        </button>
+                        
+                        <div style="background: #e7f3ff; padding: 10px; border-radius: 5px; margin-top: 15px; font-size: 14px;">
+                            <strong>REST API Submission:</strong> Fish data will be POST'd to your callback URL with comprehensive detection results.
+                        </div>
+                    </div>
+                `;
+        } else {
+          html += `
+                    <div class="submit-section" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%);">
+                        <h4>ℹ️ No Callback URL Set</h4>
+                        <p>To enable data submission, please set a callback URL above and upload another image.</p>
+                        <p>Or use query parameter: <code>?callback_url=https://your-url.com</code></p>
+                    </div>
+                `;
+        }
+
+        html += "</div>";
+        resultsSection.innerHTML = html;
+      }
+
+      function submitToCallback() {
+        if (!currentSessionId) {
+          showStatus("❌ No session to submit", "error");
+          return;
+        }
+
+        const submitBtn = document.getElementById("submitBtn");
+        submitBtn.disabled = true;
+        submitBtn.innerHTML =
+          '<span class="loading"></span>Submitting & Redirecting...';
+
+        showStatus(
+          "📤 Submitting fish data to callback URL and redirecting...",
+          "info",
+          true
+        );
+
+        // Add user info if provided
+        const userInfo = document.getElementById("userInfo").value;
+        const submitData = userInfo ? { user_info: userInfo } : {};
+
+        // This will redirect to callback URL after submission
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = `/api/submit/${currentSessionId}`;
+
+        if (Object.keys(submitData).length > 0) {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = "data";
+          input.value = JSON.stringify(submitData);
+          form.appendChild(input);
+        }
+
+        document.body.appendChild(form);
+        form.submit();
+      }
+
+      function testCallback() {
+        if (!currentSessionId) {
+          showStatus("❌ No session to test", "error");
+          return;
+        }
+
+        showStatus(
+          "🧪 Testing callback submission (REST API only - no redirect)...",
+          "info",
+          true
+        );
+
+        const userInfo = document.getElementById("userInfo").value;
+        const testData = {
+          test_mode: true,
+          user_info: userInfo || "Demo Test User",
+          source: "demo_interface",
+        };
+
+        fetch(`/api/submit/${currentSessionId}?format=json`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(testData),
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              const status = data.callback_submitted ? "successful" : "failed";
+              const message = data.callback_submitted
+                ? `✅ REST API submission successful! Status: ${
+                    data.callback_response?.status_code || "Unknown"
+                  }`
+                : `❌ REST API submission failed: ${
+                    data.callback_error || "Unknown error"
+                  }`;
+
+              showStatus(
+                message,
+                data.callback_submitted ? "success" : "error"
+              );
+
+              console.log("📊 Full Callback Response:", data);
+
+              // Show detailed response in UI
+              if (data.callback_response) {
+                setTimeout(() => {
+                  showStatus(
+                    `📋 Callback Details: Status ${data.callback_response.status_code} | Check console for full response`,
+                    "success"
+                  );
+                }, 3000);
+              }
+            } else {
+              showStatus(`❌ Test failed: ${data.error}`, "error");
+            }
+          })
+          .catch((error) => {
+            showStatus(`🚨 Test error: ${error.message}`, "error");
+          });
+      }
+
+      // Check API health on load
+      fetch("/api/health")
+        .then((response) => response.json())
+        .then((data) => {
+          console.log("🏥 API Health Check:", data);
+          if (data.status === "healthy") {
+            const healthMessage = `🟢 API is healthy - ${data.models.detectors} detection models loaded`;
+            if (!callbackFromQuery) {
+              showStatus(healthMessage, "success");
+            }
+          }
+        })
+        .catch((error) => {
+          showStatus(`🔴 API health check failed: ${error.message}`, "error");
+        });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🐟 Fish Analysis API - CORS Test</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        min-height: 100vh;
+      }
+      .container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .test-section {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      button {
+        background: linear-gradient(45deg, #00ff88, #00cc6a);
+        border: none;
+        color: white;
+        padding: 12px 25px;
+        font-size: 16px;
+        border-radius: 25px;
+        cursor: pointer;
+        margin: 10px;
+        transition: all 0.3s ease;
+      }
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+      button:disabled {
+        background: #666;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .result {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 5px;
+        padding: 15px;
+        margin: 10px 0;
+        font-family: monospace;
+        font-size: 14px;
+        white-space: pre-wrap;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .success {
+        border-left: 4px solid #00ff88;
+      }
+      .error {
+        border-left: 4px solid #ff4444;
+      }
+      .file-input {
+        margin: 10px 0;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 5px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+      input[type="file"] {
+        color: white;
+        width: 100%;
+      }
+      .status {
+        padding: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+        text-align: center;
+        font-weight: bold;
+      }
+      .status.online {
+        background: rgba(0, 255, 136, 0.2);
+        border: 1px solid #00ff88;
+      }
+      .status.offline {
+        background: rgba(255, 68, 68, 0.2);
+        border: 1px solid #ff4444;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🐟 Fish Analysis API - CORS Test</h1>
+
+      <div id="status" class="status">Checking API status...</div>
+
+      <div class="test-section">
+        <h3>🩺 Health Check Test</h3>
+        <p>Test basic GET request to verify CORS headers:</p>
+        <button onclick="testHealthCheck()">Test Health Check</button>
+        <div id="healthResult" class="result"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>📊 Models Info Test</h3>
+        <p>Test getting model information:</p>
+        <button onclick="testModelsInfo()">Test Models Info</button>
+        <div id="modelsResult" class="result"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>🔍 Fish Analysis Test</h3>
+        <p>Test image upload and analysis (CORS + multipart form data):</p>
+        <div class="file-input">
+          <label for="imageFile">Select fish image:</label>
+          <input type="file" id="imageFile" accept="image/*" />
+        </div>
+        <button onclick="testFishAnalysis()">Analyze Fish Image</button>
+        <div id="analysisResult" class="result"></div>
+      </div>
+
+      <div class="test-section">
+        <h3>🚫 Error Handling Test</h3>
+        <p>Test CORS with invalid requests:</p>
+        <button onclick="testInvalidRequest()">Test Invalid Request</button>
+        <div id="errorResult" class="result"></div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = "http://localhost:5004";
+
+      // Check API status on page load
+      checkAPIStatus();
+
+      async function checkAPIStatus() {
+        const statusDiv = document.getElementById("status");
+        try {
+          const response = await fetch(`${API_BASE}/health`);
+          if (response.ok) {
+            statusDiv.textContent = "✅ API is online and CORS is working!";
+            statusDiv.className = "status online";
+          } else {
+            statusDiv.textContent = "⚠️ API responded but with error status";
+            statusDiv.className = "status offline";
+          }
+        } catch (error) {
+          statusDiv.textContent = "❌ API is offline or CORS is blocked";
+          statusDiv.className = "status offline";
+        }
+      }
+
+      async function testHealthCheck() {
+        const resultDiv = document.getElementById("healthResult");
+        resultDiv.textContent = "Testing health check...";
+
+        try {
+          const response = await fetch(`${API_BASE}/health`);
+          const data = await response.json();
+
+          const result = {
+            status: response.status,
+            cors_headers: {
+              "access-control-allow-origin": response.headers.get(
+                "access-control-allow-origin"
+              ),
+              "content-type": response.headers.get("content-type"),
+            },
+            data: data,
+          };
+
+          resultDiv.textContent = JSON.stringify(result, null, 2);
+          resultDiv.className = "result success";
+        } catch (error) {
+          resultDiv.textContent = `❌ CORS Error: ${error.message}`;
+          resultDiv.className = "result error";
+        }
+      }
+
+      async function testModelsInfo() {
+        const resultDiv = document.getElementById("modelsResult");
+        resultDiv.textContent = "Getting models information...";
+
+        try {
+          const response = await fetch(`${API_BASE}/models`);
+          const data = await response.json();
+
+          resultDiv.textContent = JSON.stringify(data, null, 2);
+          resultDiv.className = "result success";
+        } catch (error) {
+          resultDiv.textContent = `❌ Error: ${error.message}`;
+          resultDiv.className = "result error";
+        }
+      }
+
+      async function testFishAnalysis() {
+        const resultDiv = document.getElementById("analysisResult");
+        const fileInput = document.getElementById("imageFile");
+
+        if (!fileInput.files[0]) {
+          resultDiv.textContent = "❌ Please select an image file first";
+          resultDiv.className = "result error";
+          return;
+        }
+
+        resultDiv.textContent = "Analyzing fish image...";
+
+        try {
+          const formData = new FormData();
+          formData.append("image", fileInput.files[0]);
+
+          const response = await fetch(`${API_BASE}/analyze`, {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            const summary = {
+              fish_count: data.fish_count,
+              processing_time: data.processing_time,
+              fish_detected: data.detections.map((fish) => ({
+                id: fish.fish_id,
+                yolo_detection: fish.detection.detected_class,
+                yolo_confidence: fish.detection.confidence,
+                species: fish.classification.species,
+                species_accuracy: fish.classification.accuracy,
+                size: fish.metrics.size_category,
+              })),
+            };
+
+            resultDiv.textContent = JSON.stringify(summary, null, 2);
+            resultDiv.className = "result success";
+          } else {
+            resultDiv.textContent = `❌ Analysis failed: ${data.error}`;
+            resultDiv.className = "result error";
+          }
+        } catch (error) {
+          resultDiv.textContent = `❌ CORS/Network Error: ${error.message}`;
+          resultDiv.className = "result error";
+        }
+      }
+
+      async function testInvalidRequest() {
+        const resultDiv = document.getElementById("errorResult");
+        resultDiv.textContent = "Testing invalid request handling...";
+
+        try {
+          // Test POST without image
+          const response = await fetch(`${API_BASE}/analyze`, {
+            method: "POST",
+          });
+
+          const data = await response.json();
+
+          const result = {
+            status: response.status,
+            expected: 400,
+            cors_working:
+              response.headers.get("access-control-allow-origin") === "*",
+            error_message: data.error,
+          };
+
+          resultDiv.textContent = JSON.stringify(result, null, 2);
+          resultDiv.className =
+            response.status === 400 ? "result success" : "result error";
+        } catch (error) {
+          resultDiv.textContent = `❌ Error: ${error.message}`;
+          resultDiv.className = "result error";
+        }
+      }
+    </script>
+  </body>
+</html>

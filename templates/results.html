@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐟 Fish Identification Results</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f0f8ff; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .results-container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .summary { background: #e8f5e8; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .fish-result { border: 1px solid #ddd; margin: 20px 0; padding: 20px; border-radius: 8px; }
+        .detection-info { background: #f0f0f0; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .classification-info { background: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .top-results { margin-top: 10px; }
+        .species-result { padding: 5px 0; border-bottom: 1px solid #eee; }
+        .download-links { margin: 20px 0; }
+        .download-links a { display: inline-block; margin: 5px 10px; padding: 8px 15px; background: #2196F3; color: white; text-decoration: none; border-radius: 5px; }
+        .back-link { text-align: center; margin-top: 30px; }
+        .error { background: #ffebee; color: #c62828; padding: 15px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🐟 Fish Identification Results</h1>
+    </div>
+
+    <div class="results-container">
+        {% if results.error %}
+            <div class="error">
+                <h2>❌ Error</h2>
+                <p>{{ results.error }}</p>
+            </div>
+        {% else %}
+            <div class="summary">
+                <h2>📊 Summary</h2>
+                <p><strong>Image:</strong> {{ results.image_info.filename }}</p>
+                <p><strong>Dimensions:</strong> {{ results.image_info.dimensions }}</p>
+                <p><strong>Fish Detected:</strong> {{ results.summary.total_fish }}</p>
+                <p><strong>Processed:</strong> {{ results.timestamp }}</p>
+            </div>
+
+            {% if results.summary.total_fish > 0 %}
+                {% if results.annotated_image %}
+                    <div class="download-links">
+                        <h3>📸 Results</h3>
+                        <a href="/results/{{ results.annotated_image }}" target="_blank">View Annotated Image</a>
+                        <a href="/results/{{ results.results_file }}" download>Download JSON Results</a>
+                    </div>
+                {% endif %}
+
+                {% for fish in results.detections %}
+                    <div class="fish-result">
+                        <h3>🐠 Fish #{{ fish.fish_id }}</h3>
+                        
+                        <div class="detection-info">
+                            <h4>📍 Detection Information</h4>
+                            <p><strong>Confidence:</strong> {{ fish.detection.confidence }}</p>
+                            <p><strong>Area:</strong> {{ fish.detection.area_pixels }} pixels</p>
+                            <p><strong>Bounding Box:</strong> ({{ fish.detection.bounding_box.x1 }}, {{ fish.detection.bounding_box.y1 }}) to ({{ fish.detection.bounding_box.x2 }}, {{ fish.detection.bounding_box.y2 }})</p>
+                            {% if fish.crop_image %}
+                                <a href="/results/{{ fish.crop_image }}" target="_blank">View Fish Crop</a>
+                            {% endif %}
+                        </div>
+
+                        <div class="classification-info">
+                            <h4>🔬 Species Classification</h4>
+                            <p><strong>Primary Species:</strong> {{ fish.classification.primary_species }}</p>
+                            <p><strong>Accuracy:</strong> {{ fish.classification.primary_accuracy }}</p>
+                            
+                            {% if fish.classification.top_results %}
+                                <div class="top-results">
+                                    <h5>Top Classification Results:</h5>
+                                    {% for result in fish.classification.top_results %}
+                                        <div class="species-result">
+                                            <strong>{{ result.rank }}.</strong> {{ result.species_name }} 
+                                            (Accuracy: {{ result.accuracy }}, Species ID: {{ result.species_id }})
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="summary">
+                    <p>{{ results.summary.message }}</p>
+                </div>
+            {% endif %}
+        {% endif %}
+
+        <div class="back-link">
+            <a href="/" style="display: inline-block; margin: 20px 0; padding: 10px 20px; background: #4CAF50; color: white; text-decoration: none; border-radius: 5px;">🔄 Upload Another Image</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,324 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fish Detector</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .video-container {
+            position: relative;
+            margin: 20px 0;
+        }
+        #videoElement {
+            width: 100%;
+            border-radius: 10px;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .model-select {
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .distance-display {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        #fileInput {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fish Detector</h1>
+        
+        <div class="controls">
+            <button id="startBtn" class="btn">Start Camera</button>
+            <button id="captureBtn" class="btn" disabled>Capture</button>
+            <button class="btn" onclick="document.getElementById('fileInput').click()">
+                Select Image
+            </button>
+            <input type="file" id="fileInput" accept="image/*">
+            
+            <select id="modelSelect" class="model-select">
+                {% for model in models %}
+                <option value="{{ model }}">{{ model }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="video-container">
+            <video id="videoElement" autoplay playsinline></video>
+            <div id="distanceDisplay" class="distance-display"></div>
+        </div>
+        
+        <div id="results" class="results">
+            Ready for detection...
+        </div>
+    </div>
+    
+    <script>
+        let videoElement = document.getElementById('videoElement');
+        let startBtn = document.getElementById('startBtn');
+        let captureBtn = document.getElementById('captureBtn');
+        let distanceDisplay = document.getElementById('distanceDisplay');
+        let resultsDiv = document.getElementById('results');
+        let modelSelect = document.getElementById('modelSelect');
+        let fileInput = document.getElementById('fileInput');
+        
+        let stream = null;
+        let processing = false;
+        
+        // Start/Stop camera
+        startBtn.onclick = async () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+                videoElement.srcObject = null;
+                startBtn.textContent = 'Start Camera';
+                captureBtn.disabled = true;
+                distanceDisplay.textContent = '';
+                return;
+            }
+            
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: 640,
+                        height: 480,
+                        facingMode: 'environment'
+                    } 
+                });
+                videoElement.srcObject = stream;
+                startBtn.textContent = 'Stop Camera';
+                captureBtn.disabled = false;
+                processVideoFrames();
+            } catch (err) {
+                console.error('Camera error:', err);
+                resultsDiv.textContent = `Camera error: ${err.message}`;
+            }
+        };
+        
+        // Process video frames
+        async function processVideoFrames() {
+            if (!stream) return;
+            
+            try {
+                // Create canvas to capture frame
+                let canvas = document.createElement('canvas');
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
+                let ctx = canvas.getContext('2d');
+                
+                // Draw video frame to canvas
+                ctx.drawImage(videoElement, 0, 0);
+                
+                // Convert to base64
+                let frameData = canvas.toDataURL('image/jpeg');
+                
+                // Send to server
+                let response = await fetch('/api/process_frame', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ frame: frameData })
+                });
+                
+                let result = await response.json();
+                
+                if (result.distance) {
+                    distanceDisplay.textContent = `Distance: ${result.distance.toFixed(1)} cm`;
+                    
+                    // Draw eyes
+                    if (result.eyes && result.eyes.length > 0) {
+                        result.eyes.forEach(eye => {
+                            ctx.beginPath();
+                            ctx.arc(eye[0], eye[1], 5, 0, 2 * Math.PI);
+                            ctx.fillStyle = 'green';
+                            ctx.fill();
+                        });
+                    }
+                } else {
+                    distanceDisplay.textContent = 'No eyes detected';
+                }
+                
+            } catch (err) {
+                console.error('Frame processing error:', err);
+            }
+            
+            // Continue processing if camera is still active
+            if (stream) {
+                requestAnimationFrame(processVideoFrames);
+            }
+        }
+        
+        // Capture image
+        captureBtn.onclick = async () => {
+            if (!stream || processing) return;
+            
+            processing = true;
+            captureBtn.disabled = true;
+            
+            try {
+                let canvas = document.createElement('canvas');
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
+                let ctx = canvas.getContext('2d');
+                ctx.drawImage(videoElement, 0, 0);
+                
+                // Convert to blob
+                canvas.toBlob(async (blob) => {
+                    await processImage(blob);
+                }, 'image/jpeg');
+                
+            } catch (err) {
+                console.error('Capture error:', err);
+                resultsDiv.textContent = `Capture error: ${err.message}`;
+            } finally {
+                processing = false;
+                captureBtn.disabled = false;
+            }
+        };
+        
+        // Process selected image
+        fileInput.onchange = async (e) => {
+            if (processing) return;
+            
+            let file = e.target.files[0];
+            if (!file) return;
+            
+            processing = true;
+            try {
+                await processImage(file);
+            } catch (err) {
+                console.error('File processing error:', err);
+                resultsDiv.textContent = `File processing error: ${err.message}`;
+            } finally {
+                processing = false;
+                fileInput.value = '';
+            }
+        };
+        
+        // Process image (capture or file)
+        async function processImage(imageData) {
+            let formData = new FormData();
+            formData.append('image', imageData);
+            formData.append('model', modelSelect.value);
+            
+            try {
+                let response = await fetch('/api/scan_image', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                let result = await response.json();
+                
+                if (result.error) {
+                    resultsDiv.textContent = `Error: ${result.error}`;
+                    return;
+                }
+                
+                // Display results
+                let output = `Detection Results:
+`;
+                output += `Model: ${result.model_used}
+`;
+                output += `Distance: ${result.eye_distance_cm ? result.eye_distance_cm.toFixed(1) + ' cm' : 'Not measured'}
+
+`;
+                
+                if (result.detections.length > 0) {
+                    output += `Detected Fish:
+`;
+                    result.detections.forEach((fish, i) => {
+                        output += `
+Fish ${i + 1}:
+`;
+                        output += `Species: ${fish.species}
+`;
+                        output += `Confidence: ${(fish.confidence * 100).toFixed(1)}%
+`;
+                    });
+                } else {
+                    output += `No fish detected`;
+                }
+                
+                resultsDiv.textContent = output;
+                
+            } catch (err) {
+                console.error('Processing error:', err);
+                resultsDiv.textContent = `Processing error: ${err.message}`;
+            }
+        }
+        
+        // Switch model
+        modelSelect.onchange = async () => {
+            try {
+                let response = await fetch('/api/switch_model', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ model: modelSelect.value })
+                });
+                
+                let result = await response.json();
+                
+                if (result.error) {
+                    resultsDiv.textContent = `Model switch error: ${result.error}`;
+                }
+                
+            } catch (err) {
+                console.error('Model switch error:', err);
+                resultsDiv.textContent = `Model switch error: ${err.message}`;
+            }
+        };
+    </script>
+</body>
+</html>
